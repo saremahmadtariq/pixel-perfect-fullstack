@@ -21,13 +21,11 @@ let inMemoryProgress = {
 let dbConnected = false;
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/pixelperfect', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/pixelperfect').then(() => {
   console.log('Connected to MongoDB');
   dbConnected = true;
 }).catch((err) => {
+  console.error('MongoDB connection error:', err.message);
   console.log('MongoDB connection failed. Using in-memory fallback storage.');
 });
 
