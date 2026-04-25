@@ -1,5 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const Progress = require('./models/Progress');
+const dotenv = require('dotenv');
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -7,44 +12,55 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Mock Database
+// Fallback in-memory database if MongoDB is not running
+let inMemoryProgress = {
+  completedLessons: [],
+  passedQuizzes: []
+};
+
+let dbConnected = false;
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/pixelperfect', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+}).then(() => {
+  console.log('Connected to MongoDB');
+  dbConnected = true;
+}).catch((err) => {
+  console.log('MongoDB connection failed. Using in-memory fallback storage.');
+});
+
+// Mock Course Database (Since courses are static for this app)
 const coursesData = [
   {
     id: "html",
     title: "HTML5 Fundamentals",
     description: "Learn the foundation of the web. Master semantic HTML, forms, and accessibility.",
-    icon: "fab fa-html5",
+    icon: "<i class=\"fab fa-html5\"></i>",
     accent: "#E34F26",
     lessons: [
       {
         id: "html-1",
         title: "Introduction to HTML",
-        content: "<h2>What is HTML?</h2><p>HTML (HyperText Markup Language) is the standard markup language for creating web pages. It describes the structure of a web page semantically.</p><h3>Basic Structure</h3><p>Every HTML document has a basic structure:</p><pre><code>&lt;!DOCTYPE html&gt;\n&lt;html lang=\"en\"&gt;\n&lt;head&gt;\n    &lt;meta charset=\"UTF-8\"&gt;\n    &lt;title&gt;Page Title&lt;/title&gt;\n&lt;/head&gt;\n&lt;body&gt;\n    &lt;h1&gt;My First Heading&lt;/h1&gt;\n    &lt;p&gt;My first paragraph.&lt;/p&gt;\n&lt;/body&gt;\n&lt;/html&gt;</code></pre><p>The <code>&lt;!DOCTYPE html&gt;</code> declaration defines that this document is an HTML5 document.</p>"
+        content: "<h2>What is HTML?</h2><p>HTML (HyperText Markup Language) is the standard markup language for creating web pages.</p><h3>Basic Structure</h3><pre><code>&lt;!DOCTYPE html&gt;\n&lt;html lang=\"en\"&gt;\n&lt;head&gt;\n    &lt;meta charset=\"UTF-8\"&gt;\n    &lt;title&gt;Page Title&lt;/title&gt;\n&lt;/head&gt;\n&lt;body&gt;\n    &lt;h1&gt;My First Heading&lt;/h1&gt;\n    &lt;p&gt;My first paragraph.&lt;/p&gt;\n&lt;/body&gt;\n&lt;/html&gt;</code></pre>"
       },
       {
         id: "html-2",
         title: "Semantic HTML",
-        content: "<h2>Semantic Elements</h2><p>Semantic elements clearly describe their meaning to both the browser and the developer. Examples include:</p><ul><li><code>&lt;header&gt;</code> - Defines a header for a document or section</li><li><code>&lt;nav&gt;</code> - Defines a set of navigation links</li><li><code>&lt;main&gt;</code> - Specifies the main content of a document</li><li><code>&lt;article&gt;</code> - Defines an independent, self-contained content</li><li><code>&lt;section&gt;</code> - Defines a section in a document</li><li><code>&lt;footer&gt;</code> - Defines a footer for a document or section</li></ul>"
+        content: "<h2>Semantic Elements</h2><p>Semantic elements clearly describe their meaning to both the browser and the developer.</p><ul><li><code>&lt;header&gt;</code></li><li><code>&lt;nav&gt;</code></li><li><code>&lt;main&gt;</code></li><li><code>&lt;article&gt;</code></li><li><code>&lt;section&gt;</code></li><li><code>&lt;footer&gt;</code></li></ul>"
       }
     ],
     quiz: [
-      {
-        question: "What does HTML stand for?",
-        options: ["HyperText Markup Language", "Hyperlinks and Text Markup Language", "Home Tool Markup Language"],
-        answer: 0
-      },
-      {
-        question: "Choose the correct HTML element for the largest heading:",
-        options: ["<heading>", "<h6>", "<h1>", "<head>"],
-        answer: 2
-      }
+      { question: "What does HTML stand for?", options: ["HyperText Markup Language", "Hyperlinks and Text Markup Language", "Home Tool Markup Language"], answer: 0 },
+      { question: "Choose the correct HTML element for the largest heading:", options: ["<heading>", "<h6>", "<h1>", "<head>"], answer: 2 }
     ]
   },
   {
     id: "css",
     title: "CSS3 Mastery",
     description: "Style your web pages with modern CSS. Learn Flexbox, Grid, and animations.",
-    icon: "fab fa-css3-alt",
+    icon: "<i class=\"fab fa-css3-alt\"></i>",
     accent: "#1572B6",
     lessons: [
       {
@@ -55,106 +71,117 @@ const coursesData = [
       {
         id: "css-2",
         title: "Flexbox Layout",
-        content: "<h2>Flexbox Basics</h2><p>The Flexible Box Layout Module, makes it easier to design flexible responsive layout structure without using float or positioning.</p><pre><code>.container {\n  display: flex;\n  justify-content: center; /* align horizontal */\n  align-items: center; /* align vertical */\n}</code></pre>"
+        content: "<h2>Flexbox Basics</h2><pre><code>.container {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}</code></pre>"
       }
     ],
     quiz: [
-      {
-        question: "What does CSS stand for?",
-        options: ["Creative Style Sheets", "Cascading Style Sheets", "Computer Style Sheets"],
-        answer: 1
-      },
-      {
-        question: "Which property is used to change the background color?",
-        options: ["color", "bgcolor", "background-color"],
-        answer: 2
-      }
+      { question: "What does CSS stand for?", options: ["Creative Style Sheets", "Cascading Style Sheets", "Computer Style Sheets"], answer: 1 },
+      { question: "Which property is used to change the background color?", options: ["color", "bgcolor", "background-color"], answer: 2 }
     ]
   },
   {
     id: "bootstrap",
     title: "Bootstrap 5",
     description: "Build responsive, mobile-first projects on the web with the world's most popular front-end component library.",
-    icon: "fab fa-bootstrap",
+    icon: "<i class=\"fab fa-bootstrap\"></i>",
     accent: "#7952B3",
     lessons: [
       {
         id: "bs-1",
         title: "Grid System",
-        content: "<h2>Bootstrap Grid System</h2><p>Bootstrap's grid system uses a series of containers, rows, and columns to layout and align content. It's built with flexbox and is fully responsive.</p><pre><code>&lt;div class=\"container\"&gt;\n  &lt;div class=\"row\"&gt;\n    &lt;div class=\"col-sm\"&gt;One of three columns&lt;/div&gt;\n    &lt;div class=\"col-sm\"&gt;One of three columns&lt;/div&gt;\n    &lt;div class=\"col-sm\"&gt;One of three columns&lt;/div&gt;\n  &lt;/div&gt;\n&lt;/div&gt;</code></pre>"
+        content: "<h2>Bootstrap Grid System</h2><p>Bootstrap's grid system uses a series of containers, rows, and columns to layout and align content.</p><pre><code>&lt;div class=\"container\"&gt;\n  &lt;div class=\"row\"&gt;\n    &lt;div class=\"col-sm\"&gt;Column&lt;/div&gt;\n    &lt;div class=\"col-sm\"&gt;Column&lt;/div&gt;\n    &lt;div class=\"col-sm\"&gt;Column&lt;/div&gt;\n  &lt;/div&gt;\n&lt;/div&gt;</code></pre>"
       }
     ],
     quiz: [
-      {
-        question: "In Bootstrap, which class provides a responsive fixed width container?",
-        options: [".container-fluid", ".container", ".container-fixed"],
-        answer: 1
-      }
+      { question: "In Bootstrap, which class provides a responsive fixed width container?", options: [".container-fluid", ".container", ".container-fixed"], answer: 1 }
     ]
   },
   {
     id: "js",
     title: "JavaScript Essentials",
     description: "Add interactivity to your site. Learn variables, functions, and DOM manipulation.",
-    icon: "fab fa-js-square",
+    icon: "<i class=\"fab fa-js-square\"></i>",
     accent: "#F7DF1E",
     lessons: [
       {
         id: "js-1",
         title: "Variables & Data Types",
-        content: "<h2>Variables in JavaScript</h2><p>Use <code>let</code> and <code>const</code> to declare variables.</p><pre><code>const name = \"PixelPerfect\";\nlet score = 100;\nscore += 10; // score is now 110</code></pre>"
+        content: "<h2>Variables in JavaScript</h2><pre><code>const name = \"PixelPerfect\";\nlet score = 100;\nscore += 10; // score is now 110</code></pre>"
       },
       {
         id: "js-2",
         title: "Functions",
-        content: "<h2>Defining Functions</h2><p>Functions are reusable blocks of code.</p><pre><code>function greet(name) {\n  return \"Hello, \" + name + \"!\";\n}\n\n// Arrow function syntax\nconst add = (a, b) => a + b;</code></pre>"
+        content: "<h2>Defining Functions</h2><pre><code>function greet(name) {\n  return \"Hello, \" + name + \"!\";\n}\n\nconst add = (a, b) => a + b;</code></pre>"
       }
     ],
     quiz: [
-      {
-        question: "Inside which HTML element do we put the JavaScript?",
-        options: ["<script>", "<js>", "<javascript>", "<scripting>"],
-        answer: 0
-      },
-      {
-        question: "How do you declare a variable that cannot be reassigned?",
-        options: ["var", "let", "const"],
-        answer: 2
-      }
+      { question: "Inside which HTML element do we put the JavaScript?", options: ["<script>", "<js>", "<javascript>", "<scripting>"], answer: 0 },
+      { question: "How do you declare a variable that cannot be reassigned?", options: ["var", "let", "const"], answer: 2 }
     ]
   }
 ];
 
-let userProgress = {
-  completedLessons: [],
-  passedQuizzes: []
-};
+// Helper to get or create progress
+async function getUserProgress() {
+  if (!dbConnected) return inMemoryProgress;
+  let progress = await Progress.findOne({ userId: 'default-user' });
+  if (!progress) {
+    progress = new Progress({ userId: 'default-user' });
+    await progress.save();
+  }
+  return progress;
+}
 
 // Routes
 app.get('/api/courses', (req, res) => {
   res.json(coursesData);
 });
 
-app.get('/api/progress', (req, res) => {
-  res.json(userProgress);
+app.get('/api/progress', async (req, res) => {
+  try {
+    const progress = await getUserProgress();
+    res.json(progress);
+  } catch (error) {
+    res.status(500).json({ error: 'Server Error' });
+  }
 });
 
-app.post('/api/progress/lesson', (req, res) => {
-  const { lessonId } = req.body;
-  if (!userProgress.completedLessons.includes(lessonId)) {
-    userProgress.completedLessons.push(lessonId);
+app.post('/api/progress/lesson', async (req, res) => {
+  try {
+    const { lessonId } = req.body;
+    let progress = await getUserProgress();
+    
+    if (!progress.completedLessons.includes(lessonId)) {
+      progress.completedLessons.push(lessonId);
+      if (dbConnected) {
+        progress.updatedAt = Date.now();
+        await progress.save();
+      }
+    }
+    res.json({ success: true, progress });
+  } catch (error) {
+    res.status(500).json({ error: 'Server Error' });
   }
-  res.json({ success: true, progress: userProgress });
 });
 
-app.post('/api/progress/quiz', (req, res) => {
-  const { courseId } = req.body;
-  if (!userProgress.passedQuizzes.includes(courseId)) {
-    userProgress.passedQuizzes.push(courseId);
+app.post('/api/progress/quiz', async (req, res) => {
+  try {
+    const { courseId } = req.body;
+    let progress = await getUserProgress();
+    
+    if (!progress.passedQuizzes.includes(courseId)) {
+      progress.passedQuizzes.push(courseId);
+      if (dbConnected) {
+        progress.updatedAt = Date.now();
+        await progress.save();
+      }
+    }
+    res.json({ success: true, progress });
+  } catch (error) {
+    res.status(500).json({ error: 'Server Error' });
   }
-  res.json({ success: true, progress: userProgress });
 });
 
 app.listen(PORT, () => {
-  console.log(\`Server is running on port \${PORT}\`);
+  console.log(`Server is running on port ${PORT}`);
 });
