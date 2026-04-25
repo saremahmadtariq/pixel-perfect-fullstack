@@ -47,6 +47,28 @@ function App() {
     fetchData();
   }, []);
 
+  // Animation Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    const elements = document.querySelectorAll('.animate-in');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+    };
+  }, [courses]); // re-run when courses load and render
+
+
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
   const markLessonComplete = async (lessonId) => {
@@ -172,15 +194,15 @@ function App() {
             <div className="hero-grid"></div>
         </div>
         <div className="container hero-content">
-            <div className="hero-badge animate-in visible">
+            <div className="hero-badge animate-in">
                 <i className="fas fa-rocket"></i>
                 <span>Learn. Build. Get Certified.</span>
             </div>
-            <h1 className="hero-title animate-in visible">
+            <h1 className="hero-title animate-in">
                 Become a <span className="gradient-text">Pixel Perfect</span><br/>
                 Web Developer
             </h1>
-            <p className="hero-subtitle animate-in visible">
+            <p className="hero-subtitle animate-in">
                 Master HTML, CSS, Bootstrap, JavaScript & more through interactive lessons, 
                 hands-on projects, and earn your official certification.
             </p>
@@ -189,7 +211,7 @@ function App() {
 
       <section className="section courses-section" id="courses">
         <div className="container">
-          <div className="section-header animate-in visible">
+          <div className="section-header animate-in">
             <span className="section-tag"><i className="fas fa-graduation-cap"></i> Learning Paths</span>
             <h2 className="section-title">Master These <span className="gradient-text">Technologies</span></h2>
           </div>
@@ -217,11 +239,11 @@ function App() {
       {/* Playground */}
       <section className="section playground-section" id="playground">
         <div className="container">
-            <div className="section-header animate-in visible">
+            <div className="section-header animate-in">
                 <span className="section-tag"><i className="fas fa-code"></i> Live Playground</span>
                 <h2 className="section-title">Code & See <span className="gradient-text">Instantly</span></h2>
             </div>
-            <div className="playground-wrapper animate-in visible">
+            <div className="playground-wrapper animate-in">
                 <div className="playground-tabs">
                     <button className={`pg-tab ${pgTab === 'html' ? 'active' : ''}`} onClick={() => setPgTab('html')}><i className="fab fa-html5"></i> HTML</button>
                     <button className={`pg-tab ${pgTab === 'css' ? 'active' : ''}`} onClick={() => setPgTab('css')}><i className="fab fa-css3-alt"></i> CSS</button>
@@ -248,11 +270,11 @@ function App() {
       {/* Progress */}
       <section className="section progress-section" id="progress">
         <div className="container">
-            <div className="section-header animate-in visible">
+            <div className="section-header animate-in">
                 <span className="section-tag"><i className="fas fa-chart-line"></i> Dashboard</span>
                 <h2 className="section-title">Your <span className="gradient-text">Progress</span></h2>
             </div>
-            <div className="progress-dashboard animate-in visible">
+            <div className="progress-dashboard animate-in">
                 <div className="progress-overview">
                     <div className="progress-ring-card">
                         <div className="progress-ring-container">
@@ -287,11 +309,11 @@ function App() {
       {/* Certificate */}
       <section className="section certificate-section" id="certificate">
         <div className="container">
-            <div className="section-header animate-in visible">
+            <div className="section-header animate-in">
                 <span className="section-tag"><i className="fas fa-award"></i> Certification</span>
                 <h2 className="section-title">Earn Your <span className="gradient-text">Certificate</span></h2>
             </div>
-            <div className="certificate-wrapper animate-in visible">
+            <div className="certificate-wrapper animate-in">
                 <div className="cert-requirements">
                     <h3><i className="fas fa-list-check"></i> Requirements</h3>
                     <ul>
