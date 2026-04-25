@@ -24,6 +24,11 @@ function App() {
   const [certName, setCertName] = useState('');
   const certRef = useRef(null);
 
+  // Quiz state
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizScore, setQuizScore] = useState(0);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
@@ -99,6 +104,9 @@ function App() {
     setActiveCourse(course);
     setIsModalOpen(true);
     setActiveLesson(null);
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    setQuizScore(0);
   };
 
   const scrollToSection = (id) => {
@@ -150,8 +158,22 @@ function App() {
     setTimeout(() => {
       certRef.current.style.transform = 'scale(1)';
       certRef.current.style.boxShadow = 'none';
-      alert('Certificate generated! (Simulated PDF download)');
+      window.print(); // Triggers real print/save as PDF dialog!
     }, 500);
+  };
+
+  const handleQuizSubmit = () => {
+    let score = 0;
+    activeCourse.quiz.forEach((q, idx) => {
+      if (quizAnswers[idx] === q.answer) {
+        score++;
+      }
+    });
+    setQuizScore(score);
+    setQuizSubmitted(true);
+    if (score === activeCourse.quiz.length) {
+      markQuizPassed(activeCourse.id);
+    }
   };
 
   return (
@@ -420,10 +442,46 @@ function App() {
                   <div>
                     {activeCourse.quiz.map((q, qIndex) => (
                       <div key={qIndex} className="quiz-question">
-                        <p>{q.question}</p>
-                        <button className="btn-outline btn-sm" onClick={() => markQuizPassed(activeCourse.id)}>Pass Quiz (Simulated)</button>
+                        <p>{qIndex + 1}. {q.question}</p>
+                        <div className="quiz-options">
+                          {q.options.map((opt, oIndex) => {
+                            let className = "quiz-option";
+                            if (quizSubmitted) {
+                              if (oIndex === q.answer) className += " correct";
+                              else if (quizAnswers[qIndex] === oIndex) className += " wrong";
+                            }
+                            return (
+                              <label key={oIndex} className={className}>
+                                <input 
+                                  type="radio" 
+                                  name={`q${qIndex}`} 
+                                  value={oIndex}
+                                  disabled={quizSubmitted}
+                                  checked={quizAnswers[qIndex] === oIndex}
+                                  onChange={() => setQuizAnswers(prev => ({...prev, [qIndex]: oIndex}))}
+                                />
+                                {opt}
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
                     ))}
+                    {!quizSubmitted ? (
+                      <button className="btn-primary" onClick={handleQuizSubmit}>Submit Answers</button>
+                    ) : (
+                      <div style={{marginTop: '1rem'}}>
+                        {quizScore === activeCourse.quiz.length ? (
+                          <div style={{color: '#0c6'}}><h3><i className="fas fa-check-circle"></i> Perfect Score!</h3><p>You have passed the quiz for this course.</p></div>
+                        ) : (
+                          <div>
+                            <h3 style={{color: '#f55'}}><i className="fas fa-times-circle"></i> Score: {quizScore}/{activeCourse.quiz.length}</h3>
+                            <p>Review the materials and try again.</p>
+                            <button className="btn-outline btn-sm" style={{marginTop: '1rem'}} onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); }}>Retry Quiz</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
